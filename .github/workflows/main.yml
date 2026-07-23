@@ -76,22 +76,22 @@ jobs:
         run: pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
 
       - name: Inject tweaks into IPA
-        run: cyan -i twitch.ipa -o Tweach_29.1-2.3.3.ipa -uwef tweach.deb -n "${{ inputs.display_name }}" -b ${{ inputs.bundle_id }} -s
+        run: cyan -i twitch.ipa -o Tweach_30.3.1-2.3.3.ipa -uwef tweach.deb -n "${{ inputs.display_name }}" -b ${{ inputs.bundle_id }} -s
 
       - name: Strip embedded Swift dylibs
         run: |
-          unzip -q Tweach_29.1-2.3.3.ipa -d tmp_payload
+          unzip -q Tweach_30.3.1-2.3.3.ipa -d tmp_payload
           find tmp_payload/Payload/*.app/ -name "libswift*.dylib" -print -delete
           cd tmp_payload
-          zip -qr ../Tweach_29.1-2.3.3_clean.ipa Payload
+          zip -qr ../Tweach_30.3.1-2.3.3_clean.ipa Payload
           cd ..
-          mv Tweach_29.1-2.3.3_clean.ipa Tweach_29.1-2.3.3.ipa
+          mv Tweach_30.3.1-2.3.3_clean.ipa Tweach_30.3.1-2.3.3.ipa
 
       - uses: softprops/action-gh-release@v2.0.1
         with:
-          tag_name: Tweach_29.1-2.3.3
-          name: Tweach_29.1-2.3.3
-          files: Tweach_29.1-2.3.3.ipa
+          tag_name: Tweach_30.3.1-2.3.3
+          name: Tweach_30.3.1-2.3.3
+          files: Tweach_30.3.1-2.3.3.ipa
           draft: true
 
       - name: Output Release URL
