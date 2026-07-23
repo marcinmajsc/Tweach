@@ -1,4 +1,4 @@
-name: Create Glow for Facebook app
+name: Build Tweach IPA
 
 on:
   workflow_dispatch:
