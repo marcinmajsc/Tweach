@@ -3,7 +3,6 @@ name: Build Tweach IPA
 on:
   workflow_dispatch:
     inputs:
-
       ipa_url:
         description: "URL to the decrypted IPA file"
         default: ""
@@ -13,6 +12,12 @@ on:
       tweak_url:
         description: "URL to the tweak file"
         default: ""
+        required: true
+        type: string
+
+      tweak_version:
+        description: "The version of the tweak to use. Enter the version manually from dayanch96/Tweach/releases or leave default"
+        default: "2.4"
         required: true
         type: string
 
@@ -28,6 +33,11 @@ on:
         required: true
         type: string
 
+      enable_localization:
+        type: boolean
+        required: true
+        default: true
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -35,7 +45,7 @@ concurrency:
 jobs:
   build:
     name: 
-    runs-on: macos-latest
+    runs-on: macos-26
     permissions:
       contents: write
 
@@ -49,7 +59,7 @@ jobs:
       - name: Hide sensitive inputs
         uses: levibostian/action-hide-sensitive-inputs@v1
         with:
-          exclude_inputs: display_name,bundle_id
+          exclude_inputs: display_name,bundle_id,tweak_version,enable_localization
 
       - name: Download and validate IPA
         run: |
@@ -62,36 +72,62 @@ jobs:
             exit 1
           fi
 
-      - name: Download tweak
+      - name: Download Tweach (by version)
+        if: ${{ inputs.tweak_version != '' }}
         run: |
-          wget "${{ inputs.tweak_url }}" --no-verbose -O ${{ github.workspace }}/tweach.deb
+          deb_url="https://github.com/dayanch96/Tweach/releases/download/v${{ inputs.tweak_version }}/com.dvntm.tweach_${{ inputs.tweak_version }}_iphoneos-arm.deb"
+          wget "$deb_url" --no-verbose -O tweach.deb
+
+      - name: Download Tweach (by URL)
+        if: ${{ inputs.tweak_url != '' }}
+        run: |
+          wget "${{ inputs.tweak_url }}" --no-verbose -O tweach.deb
+          file_type=$(file --mime-type -b tweach.deb)
+          if [[ "$file_type" != "application/vnd.debian.binary-package" ]]; then
+            echo "::error::Validation failed: The file is not a valid DEB file. Detected type: $file_type."
+            exit 1
+          fi
 
       - name: Install Dependencies
-        run: brew install make ldid
+        run: brew install make ldid dpkg
 
       - name: Set PATH environment variable
         run: echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+
+      - name: Update localization
+        if: ${{ inputs.enable_localization }}
+        run: |
+          mkdir debdir
+          dpkg-deb -R tweach.deb debdir
+          rm ytplus.deb
+          find "localization/" \
+            -mindepth 1 -maxdepth 1 -type d -name "*.lproj" -not -name "en.lproj" \
+            -exec cp -R "{}" "debdir/Library/Application Support/Tweach.bundle/" \;
+          cd debdir/
+          find . -type f -not -path "./DEBIAN/*" -exec md5sum {} + | sort -k 2 | sed 's/\.\/\(.*\)/\1/' > DEBIAN/md5sums
+          cd ../
+          dpkg-deb --root-owner-group -b debdir tweach.deb
 
       - name: Install cyan
         run: pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
 
       - name: Inject tweaks into IPA
-        run: cyan -i twitch.ipa -o Tweach_30.3.1-2.3.3.ipa -uwef tweach.deb -n "${{ inputs.display_name }}" -b ${{ inputs.bundle_id }} -s
+        run: cyan -i twitch.ipa -o Tweach_${{ github.event.inputs.tweak_version }}.ipa -uwef tweach.deb -n "${{ inputs.display_name }}" -b ${{ inputs.bundle_id }} -s
 
       - name: Strip embedded Swift dylibs
         run: |
-          unzip -q Tweach_30.3.1-2.3.3.ipa -d tmp_payload
+          unzip -q Tweach_${{ github.event.inputs.tweak_version }}.ipa -d tmp_payload
           find tmp_payload/Payload/*.app/ -name "libswift*.dylib" -print -delete
           cd tmp_payload
-          zip -qr ../Tweach_30.3.1-2.3.3_clean.ipa Payload
+          zip -qr ../Tweach_${{ github.event.inputs.tweak_version }}_clean.ipa Payload
           cd ..
-          mv Tweach_30.3.1-2.3.3_clean.ipa Tweach_30.3.1-2.3.3.ipa
+          mv Tweach_${{ github.event.inputs.tweak_version }}_clean.ipa Tweach_${{ github.event.inputs.tweak_version }}.ipa
 
       - uses: softprops/action-gh-release@v2.0.1
         with:
-          tag_name: Tweach_30.3.1-2.3.3
-          name: Tweach_30.3.1-2.3.3
-          files: Tweach_30.3.1-2.3.3.ipa
+          tag_name: Tweach_${{ github.event.inputs.tweak_version }}
+          name: Tweach_${{ github.event.inputs.tweak_version }}
+          files: Tweach_${{ github.event.inputs.tweak_version }}.ipa
           draft: true
 
       - name: Output Release URL
