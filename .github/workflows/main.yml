@@ -12,7 +12,7 @@ on:
       tweak_url:
         description: "URL to the tweak file"
         default: ""
-        required: true
+        required: false
         type: string
 
       tweak_version:
@@ -73,7 +73,7 @@ jobs:
           fi
 
       - name: Download Tweach (by version)
-        if: ${{ inputs.tweak_version != '' }}
+        if: ${{ inputs.tweak_version != '' && inputs.tweak_url == '' }}
         run: |
           deb_url="https://github.com/dayanch96/Tweach/releases/download/v${{ inputs.tweak_version }}/com.dvntm.tweach_${{ inputs.tweak_version }}_iphoneos-arm.deb"
           wget "$deb_url" --no-verbose -O tweach.deb
