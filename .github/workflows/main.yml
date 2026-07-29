@@ -99,7 +99,7 @@ jobs:
         run: |
           mkdir debdir
           dpkg-deb -R tweach.deb debdir
-          rm ytplus.deb
+          rm tweach.deb
           find "localization/" \
             -mindepth 1 -maxdepth 1 -type d -name "*.lproj" -not -name "en.lproj" \
             -exec cp -R "{}" "debdir/Library/Application Support/Tweach.bundle/" \;
