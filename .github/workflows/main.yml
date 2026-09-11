@@ -17,7 +17,7 @@ on:
 
       tweak_version:
         description: "The version of the tweak to use. Enter the version manually from dayanch96/Tweach/releases or leave default"
-        default: "2.4"
+        default: "2.4.1"
         required: false
         type: string
 
